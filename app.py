@@ -148,7 +148,24 @@ def venues():
       "num_upcoming_shows": 0,
     }]
   }]
-  return render_template('pages/venues.html', areas=data);
+  areas = db.session.query(Venue.city, Venue.state).distinct()
+  venue_data = []
+  for location in areas:
+    location = dict(zip(('city', 'state'), location))
+    location['venues'] = []
+    venues_list = Venue.query.filter_by(city=location['city'], state=location['state']).all()
+    for venue in venues_list:
+      shows = Show.query.filter_by(venue_id=venue.id).all()
+      venue = {
+        'id': venue.id,
+        'name': venue.name,
+        'num_upcoming_shows': len(upcoming_shows(shows))
+      }
+      location['venues'].append(venue)
+    venue_data.append(location)
+
+
+  return render_template('pages/venues.html', areas=venue_data);
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
@@ -246,7 +263,26 @@ def show_venue(venue_id):
     "past_shows_count": 1,
     "upcoming_shows_count": 1,
   }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+  venue = Venue.query.filter_by(id=venue_id).first()
+  shows = Show.query.filter_by(venue_id=venue_id).all()
+  data = {
+    "name": venue.name,
+    "id": venue.id,
+    "genres": ''.join(list(filter(lambda x : x!= '{' and x!='}', venue.genres))).split(','),
+    "city": venue.city,
+    "state": venue.state,
+    "address": venue.address,
+    "phone": venue.phone,
+    "website": venue.website,
+    "facebook_link": venue.facebook_link,
+    "seeking_talent": venue.searching_venue,
+    "seeking_description": venue.desc,
+    "image_link": venue.image_link,
+    "upcoming_shows": upcoming_shows(shows),
+    "upcoming_shows_count": len(upcoming_shows(shows)),
+    "past_shows": past_shows(shows),
+    "past_shows_count": len(past_shows(shows))
+  }
   return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
@@ -312,17 +348,8 @@ def delete_venue(venue_id):
 @app.route('/artists')
 def artists():
   # TODO: replace with real data returned from querying the database
-  data=[{
-    "id": 4,
-    "name": "Guns N Petals",
-  }, {
-    "id": 5,
-    "name": "Matt Quevedo",
-  }, {
-    "id": 6,
-    "name": "The Wild Sax Band",
-  }]
-  return render_template('pages/artists.html', artists=data)
+  artists_data = Artist.query.all()  # artists.html will fetch id and namefor the respective artists
+  return render_template('pages/artists.html', artists=artists_data)
 
 @app.route('/artists/search', methods=['POST'])
 def search_artists():
@@ -414,7 +441,26 @@ def show_artist(artist_id):
     "past_shows_count": 0,
     "upcoming_shows_count": 3,
   }
-  data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
+  artist = Artist.query.filter_by(id=artist_id).first()
+  shows = Show.query.filter_by(artist_id=artist_id).all()
+
+  data = {
+    "name": artist.name,
+    "id": artist.id,
+    "genres": ''.join(list(filter(lambda x : x!= '{' and x!='}', artist.genres))).split(','),
+    "city": artist.city,
+    "state": artist.state,
+    "phone": artist.phone,
+    "website": artist.website,
+    "facebook_link": artist.facebook_link,
+    "seeking_venue": artist.searching_artist,
+    "seeking_description": artist.desc,
+    "image_link": artist.image_link,
+    "upcoming_shows": upcoming_shows(shows),
+    "upcoming_shows_count": len(upcoming_shows(shows)),
+    "past_shows": past_shows(shows),
+    "past_shows_count": len(past_shows(shows))
+  }
   return render_template('pages/show_artist.html', artist=data)
 
 #  Update
@@ -422,19 +468,7 @@ def show_artist(artist_id):
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
   form = ArtistForm()
-  artist={
-    "id": 4,
-    "name": "Guns N Petals",
-    "genres": ["Rock n Roll"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "326-123-5000",
-    "website": "https://www.gunsnpetalsband.com",
-    "facebook_link": "https://www.facebook.com/GunsNPetals",
-    "seeking_venue": True,
-    "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-    "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
-  }
+  artist=Artist.query.get(artist_id)
   # TODO: populate form with fields from artist with ID <artist_id>
   return render_template('forms/edit_artist.html', form=form, artist=artist)
 
@@ -442,26 +476,41 @@ def edit_artist(artist_id):
 def edit_artist_submission(artist_id):
   # TODO: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
+  form = ArtistForm()
+  if form.validate():
+    try:
 
+      artist_data = Artist.query.get(artist_id)
+      artist_data.name = form.name.data
+      artist_data.city = form.city.data
+      artist_data.state = form.state.data
+      artist_data.phone = form.phone.data
+      artist_data.genres = form.genres.data
+      artist_data.facebook_link = form.facebook_link.data
+      artist_data.image_link = form.image_link.data
+      artist_data.website = form.website_link.data
+      artist_data.searching_artist = form.seeking_venue.data
+      artist_data.desc = form.seeking_description.data
+      db.session.add(artist_data)
+      db.session.commit()
+
+    # on successful db insert, flash success
+      flash('Artist ' + request.form['name'] + ' was successfully changed!')
+    # TODO: on unsuccessful db insert, flash an error instead.
+    # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
+    except:
+      flash('Artist ' + request.form['name'] + ' could not be changed')
+      db.session.rollback()
+    finally:
+      db.session.close()
+  else:
+    flash(form.errors)
   return redirect(url_for('show_artist', artist_id=artist_id))
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
   form = VenueForm()
-  venue={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
-  }
+  venue=Venue.query.filter_by(id=venue_id).first()
   # TODO: populate form with values from venue with ID <venue_id>
   return render_template('forms/edit_venue.html', form=form, venue=venue)
 
@@ -469,6 +518,37 @@ def edit_venue(venue_id):
 def edit_venue_submission(venue_id):
   # TODO: take values from the form submitted, and update existing
   # venue record with ID <venue_id> using the new attributes
+  form = VenueForm()
+  if form.validate():
+    try:
+
+      venue_data = Venue.query.get(venue_id)
+      venue_data.name = form.name.data
+      venue_data.city = form.city.data
+      venue_data.state = form.state.data
+      venue_data.address = form.address.data
+      venue_data.phone = form.phone.data
+      venue_data.genres = form.genres.data
+      venue_data.facebook_link = form.facebook_link.data
+      venue_data.image_link = form.image_link.data
+      venue_data.website = form.website_link.data
+      venue_data.searching_venue = form.seeking_talent.data
+      venue_data.desc = form.seeking_description.data
+      db.session.add(venue_data)
+      db.session.commit()
+
+    # on successful db insert, flash success
+      flash('Venue ' + request.form['name'] + ' was successfully changed!')
+    # TODO: on unsuccessful db insert, flash an error instead.
+    # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
+    except:
+      flash('Venue ' + request.form['name'] + ' could not be changed')
+      db.session.rollback()
+    finally:
+      db.session.close()
+  else:
+    flash(form.errors)
+
   return redirect(url_for('show_venue', venue_id=venue_id))
 
 #  Create Artist
@@ -561,6 +641,18 @@ def shows():
     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
     "start_time": "2035-04-15T20:00:00.000Z"
   }]
+  shows =Show.query.all()
+  data = []
+  for show in shows:
+    show = {
+      "artist_id": show.artist_id,
+      "artist_name": Artist.query.filter_by(id=show.artist_id).first().name,
+      "artist_image_link": Artist.query.filter_by(id=show.artist_id).first().image_link,
+      "venue_id": show.venue_id,
+      "venue_name": Venue.query.filter_by(id=show.venue_id).first().name,
+      "start_time": str(show.start_time)
+    }
+    data.append(show)
   return render_template('pages/shows.html', shows=data)
 
 @app.route('/shows/create')
@@ -604,6 +696,37 @@ def not_found_error(error):
 @app.errorhandler(500)
 def server_error(error):
     return render_template('errors/500.html'), 500
+
+
+def upcoming_shows(shows):
+  upcoming = []
+  for show in shows:
+    if show.start_time > datetime.now():
+      upcoming.append({
+        "artist_id": show.artist_id,
+        "artist_name": Artist.query.filter_by(id=show.artist_id).first().name,
+        "artist_image_link": Artist.query.filter_by(id=show.artist_id).first().image_link,
+        "venue_id": show.venue_id,
+        "venue_name": Venue.query.filter_by(id=show.venue_id).first().name,
+        "venue_image_link": Venue.query.filter_by(id=show.venue_id).first().image_link,
+        "start_time": format_datetime(str(show.start_time))
+      })
+  return upcoming
+
+def past_shows(shows):
+  past = []
+  for show in shows:
+    if show.start_time < datetime.now():
+      past.append({
+        "artist_id": show.artist_id,
+        "artist_name": Artist.query.filter_by(id=show.artist_id).first().name,
+        "artist_image_link": Artist.query.filter_by(id=show.artist_id).first().image_link,
+        "venue_id": show.venue_id,
+        "venue_name": Venue.query.filter_by(id=show.venue_id).first().name,
+        "venue_image_link": Venue.query.filter_by(id=show.venue_id).first().image_link,
+        "start_time": format_datetime(str(show.start_time))
+      })
+  return past
 
 
 if not app.debug:
