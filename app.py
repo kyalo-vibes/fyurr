@@ -338,7 +338,8 @@ def edit_artist_submission(artist_id):
             artist_data.searching_artist = form.seeking_venue.data
             # replace the existing data with new data
             artist_data.desc = form.seeking_description.data
-            db.session.add(artist_data)
+            artist_submission = db.session.merge(artist_data)
+            db.session.add(artist_submission)
             db.session.commit()   # commit changes to DB
 
         # on successful db insert, flash success
@@ -370,11 +371,12 @@ def edit_venue(venue_id):
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
 
-    form = VenueForm()
+    form = VenueForm(request.form)
     if form.validate():
         try:
             # fetch data for matched venue id
             venue_data = Venue.query.get(venue_id)
+            print(venue_data)
             venue_data.name = form.name.data
             venue_data.city = form.city.data
             venue_data.state = form.state.data
@@ -388,7 +390,8 @@ def edit_venue_submission(venue_id):
             # replace existing data with new data
             venue_data.desc = form.seeking_description.data
             # SQLAlchemy converts to SQL and changes record
-            db.session.add(venue_data)
+            venue_submission = db.session.merge(venue_data)
+            db.session.add(venue_submission)
             db.session.commit()    # commit changes to DB
 
             # Successfull change message
@@ -396,7 +399,8 @@ def edit_venue_submission(venue_id):
                 'Venue ' +
                 request.form['name'] +
                 ' was successfully changed!')
-        except BaseException:
+        except Exception as e:
+            print(f'Error ==> {e}')
             flash(
                 'Venue ' +
                 request.form['name'] +
