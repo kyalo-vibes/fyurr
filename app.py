@@ -23,6 +23,8 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from models import *
+import sys
+
 # ----------------------------------------------------------------------------#
 # App Config.
 # ----------------------------------------------------------------------------#
@@ -59,7 +61,11 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/')
 def index():
-    return render_template('pages/home.html')
+    venues = Venue.query.order_by(Venue.id.desc()).limit(10).all()
+    artists = Artist.query.order_by(Artist.id.desc()).limit(10).all()
+
+    return render_template('pages/home.html', venues=venues, artists=artists)
+
 
 
 #  Venues
@@ -203,6 +209,7 @@ def create_venue_submission():
                 request.form['name'] +
                 ' was successfully listed!')
         except BaseException:
+            print(sys.exc_info())
             flash(
                 'An error occurred. Venue ' +
                 request.form['name'] +
@@ -349,6 +356,7 @@ def edit_artist_submission(artist_id):
                 ' was successfully changed!')  # successful change message
 
         except BaseException:
+            print(sys.exc_info())
             flash(
                 'Artist ' +
                 request.form['name'] +
@@ -399,8 +407,8 @@ def edit_venue_submission(venue_id):
                 'Venue ' +
                 request.form['name'] +
                 ' was successfully changed!')
-        except Exception as e:
-            print(f'Error ==> {e}')
+        except BaseException:
+            print(sys.exc_info())
             flash(
                 'Venue ' +
                 request.form['name'] +
@@ -454,6 +462,7 @@ def create_artist_submission():
                 request.form['name'] +
                 ' was successfully listed!')
         except BaseException:
+            print(sys.exc_info())
             flash(
                 'Artist ' +
                 request.form['name'] +
@@ -517,6 +526,7 @@ def create_show_submission():
             # Successful creation message
             flash('Show was successfully listed!')
         except BaseException:
+            print(sys.exc_info())
             flash('An error occurred. Show could not be listed.')
         finally:
             db.session.close()
