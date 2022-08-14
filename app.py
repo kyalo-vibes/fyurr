@@ -108,24 +108,25 @@ def search_venues():
         "data": []
     }
     # fetch all venue ids and names
-    venues = db.session.query(Venue.id, Venue.name).all()
+    # venues = db.session.query(Venue.id, Venue.name).all()
     # fetch searching term
-    s_term = request.form.get('search_term').lower()
+    s_term = request.form.get('search_term')
     # print(s_term)    # confirm searching term is fetched
     if not s_term:
         # error message for null searching term
         flash("You did not search for anything")
     elif s_term:
+        venues = db.session.query(Venue.id, Venue.name).filter(
+            Venue.name.ilike(f'%{s_term}%')).all()
         for venue in venues:
             id = venue.id
             name = venue.name   # assign venue id and name for current loop
-            if name.lower().find(s_term) != -1:
-                venue = {         # assign match venue id
-                    'id': id,     # and name to venue dictionary
-                    'name': name
-                }
-                # append match to response dictionary
-                response['data'].append(venue)
+            venue = {         # assign match venue id
+                'id': id,     # and name to venue dictionary
+                'name': name
+            }
+            # append match to response dictionary
+            response['data'].append(venue)
         # count total matches in response dictionary
         response['count'] = len(response['data'])
 
