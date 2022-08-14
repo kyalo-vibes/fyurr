@@ -67,7 +67,6 @@ def index():
     return render_template('pages/home.html', venues=venues, artists=artists)
 
 
-
 #  Venues
 #  ----------------------------------------------------------------
 
