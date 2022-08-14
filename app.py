@@ -4,7 +4,6 @@
 
 from dataclasses import dataclass
 import json
-from types import CoroutineType
 import dateutil.parser
 import babel
 from flask import (
@@ -357,10 +356,9 @@ def edit_artist_submission(artist_id):
 
         except BaseException:
             print(sys.exc_info())
-            flash(
-                'Artist ' +
-                request.form['name'] +
-                ' could not be changed')   # error message
+            flash('Artist ' +
+                  request.form['name'] +
+                  ' could not be changed')   # error message
             db.session.rollback()
         finally:
             db.session.close()
