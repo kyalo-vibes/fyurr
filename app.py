@@ -83,11 +83,11 @@ def venues():
             city=location['city'], state=location['state']).all()
         for venue in venues_list:
             # fetch shows for the current venue
-            shows = Show.query.filter_by(venue_id=venue.id).all()
+            shows = venue.id
             venue = {   # the second dictionary assignment
                 'id': venue.id,
                 'name': venue.name,
-                'num_upcoming_shows': len(upcoming_shows(shows))
+                'num_upcoming_shows': len(upcoming_shows_venues(shows))
             }
             location['venues'].append(venue)
         venue_data.append(location)
@@ -142,7 +142,7 @@ def show_venue(venue_id):
     # get venue data that matches the given venue id
     venue = Venue.query.filter_by(id=venue_id).first()
     # get shows data for the given venue
-    shows = Show.query.filter_by(venue_id=venue_id).all()
+    shows = venue_id
     data = {    # assign data dictionary to values of the matched venue
         "name": venue.name,
         "id": venue.id,
@@ -158,10 +158,10 @@ def show_venue(venue_id):
         "seeking_talent": venue.searching_venue,
         "seeking_description": venue.desc,
         "image_link": venue.image_link,
-        "upcoming_shows": upcoming_shows(shows),
-        "upcoming_shows_count": len(upcoming_shows(shows)),
-        "past_shows": past_shows(shows),
-        "past_shows_count": len(past_shows(shows))
+        "upcoming_shows": upcoming_shows_venues(shows),
+        "upcoming_shows_count": len(upcoming_shows_venues(shows)),
+        "past_shows": past_shows_venues(shows),
+        "past_shows_count": len(past_shows_venues(shows))
     }
     return render_template('pages/show_venue.html', venue=data)
 
@@ -286,7 +286,7 @@ def show_artist(artist_id):
     # fetch artist data for matched artist
     artist = Artist.query.filter_by(id=artist_id).first()
     # fetch show data for matched artist
-    shows = Show.query.filter_by(artist_id=artist_id).all()
+    shows = artist_id
 
     data = {    # assign artist's details to data dictionary
         "name": artist.name,
@@ -302,10 +302,10 @@ def show_artist(artist_id):
         "seeking_venue": artist.searching_artist,
         "seeking_description": artist.desc,
         "image_link": artist.image_link,
-        "upcoming_shows": upcoming_shows(shows),
-        "upcoming_shows_count": len(upcoming_shows(shows)),
-        "past_shows": past_shows(shows),
-        "past_shows_count": len(past_shows(shows))
+        "upcoming_shows": upcoming_shows_artists(shows),
+        "upcoming_shows_count": len(upcoming_shows_artists(shows)),
+        "past_shows": past_shows_artists(shows),
+        "past_shows_count": len(past_shows_artists(shows))
     }
     return render_template('pages/show_artist.html', artist=data)
 
@@ -533,45 +533,89 @@ def server_error(error):
 # function that calculates upcoming shows
 
 
-def upcoming_shows(shows):
+def upcoming_shows_artists(shows):
     upcoming = []
-    for show in shows:
-        if show.start_time > datetime.now():
-            upcoming.append({
-                "artist_id": show.artist_id,
-                "artist_name": Artist.query.filter_by(
-                    id=show.artist_id).first().name,
-                "artist_image_link": Artist.query.filter_by(
-                    id=show.artist_id).first().image_link,
-                "venue_id": show.venue_id,
-                "venue_name": Venue.query.filter_by(
-                    id=show.venue_id).first().name,
-                "venue_image_link": Venue.query.filter_by(
-                    id=show.venue_id).first().image_link,
-                "start_time": format_datetime(str(show.start_time))
-            })
+    upcoming_shows_query = db.session.query(Show).join(Venue).filter(
+        Show.artist_id == shows).filter(Show.start_time > datetime.now()).all()
+    for show in upcoming_shows_query:
+        upcoming.append({
+            "artist_id": show.artist_id,
+            "artist_name": Artist.query.filter_by(
+                id=show.artist_id).first().name,
+            "artist_image_link": Artist.query.filter_by(
+                id=show.artist_id).first().image_link,
+            "venue_id": show.venue_id,
+            "venue_name": Venue.query.filter_by(
+                id=show.venue_id).first().name,
+            "venue_image_link": Venue.query.filter_by(
+                id=show.venue_id).first().image_link,
+            "start_time": format_datetime(str(show.start_time))
+        })
+    return upcoming
+
+
+def upcoming_shows_venues(shows):
+    upcoming = []
+    upcoming_shows_query = db.session.query(Show).join(Artist).filter(
+        Show.venue_id == shows).filter(Show.start_time > datetime.now()).all()
+    for show in upcoming_shows_query:
+        upcoming.append({
+            "artist_id": show.artist_id,
+            "artist_name": Artist.query.filter_by(
+                id=show.artist_id).first().name,
+            "artist_image_link": Artist.query.filter_by(
+                id=show.artist_id).first().image_link,
+            "venue_id": show.venue_id,
+            "venue_name": Venue.query.filter_by(
+                id=show.venue_id).first().name,
+            "venue_image_link": Venue.query.filter_by(
+                id=show.venue_id).first().image_link,
+            "start_time": format_datetime(str(show.start_time))
+        })
     return upcoming
 
 # function that calculates past shows
 
 
-def past_shows(shows):
+def past_shows_artists(shows):
     past = []
-    for show in shows:
-        if show.start_time < datetime.now():
-            past.append({
-                "artist_id": show.artist_id,
-                "artist_name": Artist.query.filter_by(
-                    id=show.artist_id).first().name,
-                "artist_image_link": Artist.query.filter_by(
-                    id=show.artist_id).first().image_link,
-                "venue_id": show.venue_id,
-                "venue_name": Venue.query.filter_by(
-                    id=show.venue_id).first().name,
-                "venue_image_link": Venue.query.filter_by(
-                    id=show.venue_id).first().image_link,
-                "start_time": format_datetime(str(show.start_time))
-            })
+    past_shows_query = db.session.query(Show).join(Venue).filter(
+        Show.artist_id == shows).filter(Show.start_time < datetime.now()).all()
+    for show in past_shows_query:
+        past.append({
+            "artist_id": show.artist_id,
+            "artist_name": Artist.query.filter_by(
+                id=show.artist_id).first().name,
+            "artist_image_link": Artist.query.filter_by(
+                id=show.artist_id).first().image_link,
+            "venue_id": show.venue_id,
+            "venue_name": Venue.query.filter_by(
+                id=show.venue_id).first().name,
+            "venue_image_link": Venue.query.filter_by(
+                id=show.venue_id).first().image_link,
+            "start_time": format_datetime(str(show.start_time))
+        })
+    return past
+
+
+def past_shows_venues(shows):
+    past = []
+    past_shows_query = db.session.query(Show).join(Artist).filter(
+        Show.venue_id == shows).filter(Show.start_time < datetime.now()).all()
+    for show in past_shows_query:
+        past.append({
+            "artist_id": show.artist_id,
+            "artist_name": Artist.query.filter_by(
+                id=show.artist_id).first().name,
+            "artist_image_link": Artist.query.filter_by(
+                id=show.artist_id).first().image_link,
+            "venue_id": show.venue_id,
+            "venue_name": Venue.query.filter_by(
+                id=show.venue_id).first().name,
+            "venue_image_link": Venue.query.filter_by(
+                id=show.venue_id).first().image_link,
+            "start_time": format_datetime(str(show.start_time))
+        })
     return past
 
 
