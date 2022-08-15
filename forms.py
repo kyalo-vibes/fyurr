@@ -210,7 +210,6 @@ class ArtistForm(FlaskForm):
         ]
     )
     phone = StringField(
-        # TODO implement validation logic for state
         'phone', validators=[DataRequired(), validate_phone]
     )
     image_link = StringField(

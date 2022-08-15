@@ -9,11 +9,7 @@ DEBUG = True
 # Connect to the database
 
 
-# TODO IMPLEMENT DATABASE URL
 class DatabaseURI:
-
-    # Just change the names of your database and crendtials and all to connect
-    # to your local system
     DATABASE_NAME = "fyurr"
     username = 'kyalo'
     password = 'kevin.kioko7'
