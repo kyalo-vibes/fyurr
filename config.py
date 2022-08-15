@@ -18,6 +18,6 @@ class DatabaseURI:
     username = 'kyalo'
     password = 'kevin.kioko7'
     url = 'localhost:5432'
-    SQLALCHEMY_DATABASE_URI = "postgres://{}:{}@{}/{}".format(
+    SQLALCHEMY_DATABASE_URI = "postgresql://{}:{}@{}/{}".format(
         username, password, url, DATABASE_NAME)
     SQLALCHEMY_TRACK_MODIFICATIONS = True
